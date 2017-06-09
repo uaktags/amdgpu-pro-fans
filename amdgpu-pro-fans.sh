@@ -76,10 +76,43 @@ set_all_fan_speeds ()
     done
 }
 
+set_single_gpu_fan_speeds ()
+{
+    cardcount="0";
+    CurrentCard="/sys/class/drm/card$adapter/"
+    if [ -d $CurrentCard ]; then
+	for CurrentMonitor in "$CurrentCard"device/hwmon/hwmon?/ ; do
+	cd $CurrentMonitor # &>/dev/null
+	workingdir="`pwd`"
+	fanmax=$(head -1 "$workingdir"/pwm1_max)
+	if [ $fanmax -gt 0 ] ; then    
+	    speed=$(( fanmax * fanpercent ))
+	    speed=$(( speed / 100 ))
+	    sudo chown $USER "$workingdir"/pwm1_enable
+	    sudo chown $USER "$workingdir"/pwm1
+	    sudo echo -n "1" >> $workingdir/pwm1_enable # &>/dev/null
+	    sudo echo -n "$speed" >> $workingdir/pwm1 # &>/dev/null
+	    speedresults=$(head -1 "$workingdir"/pwm1)
+	    if [ $(( speedresults - speed )) -gt 6 ] ; then
+		 echo "Error Setting Speed For Card$cardcount!"
+	    else
+		 echo "Card$cardcount Speed Set To $fanpercent %"
+	    fi
+	else
+	    echo "Error: Unable To Determine Maximum Fan Speed For Card$cardcount!"
+	fi
+	done
+    else
+	echo "Error: Unable to find the specified card"
+    fi
+}
+
 set_fans_requested ()
 {
-    if [ "$adapter"="all" ] ; then
+    if [ "$adapter" = "all" ]; then
         set_all_fan_speeds
+    else
+	set_single_gpu_fan_speeds
     fi
 }
 
