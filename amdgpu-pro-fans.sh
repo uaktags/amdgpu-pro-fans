@@ -3,9 +3,11 @@
 #  AMDGPU-PRO LINUX UTILITIES SUITE  #
 ######################################
 # Utility Name: AMDGPU-PRO-FANS
-# Version: 0.1.5
-# Version Name: MahiMahi
-# https://github.com/DominiLux/amdgpu-pro-fans
+# Version: 0.1.6
+# Version Name: UAKTags
+# https://github.com/UAKTags/amdgpu-pro-fans
+
+# Forked from DominiLux
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -78,7 +80,6 @@ set_all_fan_speeds ()
 
 set_single_gpu_fan_speeds ()
 {
-    cardcount="0";
     CurrentCard="/sys/class/drm/card$adapter/"
     if [ -d $CurrentCard ]; then
 	for CurrentMonitor in "$CurrentCard"device/hwmon/hwmon?/ ; do
@@ -94,12 +95,12 @@ set_single_gpu_fan_speeds ()
 	    sudo echo -n "$speed" >> $workingdir/pwm1 # &>/dev/null
 	    speedresults=$(head -1 "$workingdir"/pwm1)
 	    if [ $(( speedresults - speed )) -gt 6 ] ; then
-		 echo "Error Setting Speed For Card$cardcount!"
+		 echo "Error Setting Speed For Card$adapter!"
 	    else
-		 echo "Card$cardcount Speed Set To $fanpercent %"
+		 echo "Card$adapter Speed Set To $fanpercent %"
 	    fi
 	else
-	    echo "Error: Unable To Determine Maximum Fan Speed For Card$cardcount!"
+	    echo "Error: Unable To Determine Maximum Fan Speed For Card$adapter!"
 	fi
 	done
     else

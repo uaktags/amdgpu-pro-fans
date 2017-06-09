@@ -1,3 +1,7 @@
+Version 0.1.6
+    - [-a] switch has been implemented to allow for controlling specific gpu's fan speed
+    - Original project deemed deprecated by developer, current fork in use in rig.
+
 Version 0.1.5
     - Now works with all AMD Radeon R8, R9, and RX Series Cards
     - [-s] switch has been fully implmented and debugged to specificy your speed
