@@ -32,6 +32,7 @@ adapter="all"
 targettemp=""
 fanpercent=""
 arguments="$@"
+verbosity="1"
 ##################
 # USAGE FUNCTION #
 ##################
@@ -42,6 +43,7 @@ usage ()
     echo "usage: $0 [-s <0-100>] to set fan speed percentage"
     echo "usage: $0 [-r] to read current fan speed percentage"
     echo "usage: $0 [-t] to read current temperature"
+    echo "usage: $0 [-v <0-1>] to change verbosity. 0 = none. 1 = verbose."
     echo "usage: $0 [-h] for help..."
     exit
 }
@@ -67,12 +69,18 @@ set_all_fan_speeds ()
                   sudo echo -n "$speed" >> $workingdir/pwm1 # &>/dev/null
                   speedresults=$(head -1 "$workingdir"/pwm1)
                   if [ $(( speedresults - speed )) -gt 6 ] ; then
-                       echo "Error Setting Speed For Card$cardcount!"
+                  	if [ "$verbosity" -eq 0 ] ; then echo "-2" ; fi
+                  	if [ "$verbosity" -eq 1 ] ; then echo "Error Setting Speed For Card$cardcount!" ; fi
+                       
                   else
-                       echo "Card$cardcount Speed Set To $fanpercent %"
+                       if [ "$verbosity" -eq 0 ] ; then echo "$fanpercent" ; fi
+                       if [ "$verbosity" -eq 1 ] ; then echo "Card$cardcount Speed Set To $fanpercent %" ; fi
+                       
                   fi
               else
-                  echo "Error: Unable To Determine Maximum Fan Speed For Card$cardcount!"
+                  if [ "$verbosity" -eq 0 ] ; then echo "-1" ; fi
+                  if [ "$verbosity" -eq 1 ] ; then echo "Error: Unable To Determine Maximum Fan Speed For Card$cardcount!" ; fi
+                  
               fi
          done
          cardcount="$(($cardcount + 1))"
@@ -91,9 +99,11 @@ read_all_fan_speeds ()
               if [ $fanspeed -gt 0 ] ; then
               		speedf=$( echo "scale=2; $fanspeed / $fanmax * 100" | bc)
                   speed=${speedf%.*}
-                  echo "$speed"             
+                  if [ "$verbosity" -eq 0 ] ; then echo "$speed" ; fi
+                  if [ "$verbosity" -eq 1 ] ; then echo "Fan speed on Card$cardcount is $speed%" ; fi          
               else
-                  echo "Error: Unable To Determine Fan Speed For Card$cardcount!"
+                  if [ "$verbosity" -eq 0 ] ; then echo "-1" ; fi  
+                  if [ "$verbosity" -eq 1 ] ; then echo "Error: Unable To Determine Fan Speed For Card$cardcount!" ; fi
               fi
          done
          cardcount="$(($cardcount + 1))"
@@ -110,9 +120,11 @@ read_current_temperature ()
               temp=$(head -1 "$workingdir"/temp1_input)
               temp=$(( $temp/1000 ))
               if [ $temp -gt 0 ] ; then
-                  echo "$temp"              
+                  if [ "$verbosity" -eq 0 ] ; then echo "$temp" ; fi
+                  if [ "$verbosity" -eq 1 ] ; then echo "Temperature on Card$cardcount is $temp%" ; fi     
               else
-                  echo "Error: Unable To Determine Card Temperature For Card$cardcount!"
+                  if [ "$verbosity" -eq 0 ] ; then echo "-1" ; fi   
+                  if [ "$verbosity" -eq 1 ] ; then echo "Error: Unable To Determine Card Temperature For Card$cardcount!" ; fi
               fi
          done
          cardcount="$(($cardcount + 1))"
@@ -132,19 +144,20 @@ set_fans_requested ()
 #################################
 command_line_parser ()
 {
-     parseline=`getopt -s bash -u -o a:s:rht -n '$0' -- "$arguments"` 
+     parseline=`getopt -s bash -u -o a:s:rhtv: -n '$0' -- "$arguments"` 
      eval set -- "$parseline"
      while true ; do
         case "$1" in
             -a ) adapter="$2" ; shift 2 ;;
-            -s ) fanpercent="$2" ; set_fans_requested ; break ;;
-            -r ) read_all_fan_speeds ; break ;;
-            -t ) read_current_temperature ; break ;;
+            -v ) verbosity="$2" ; shift 2 ;;
+            -s ) fanpercent="$2" ; set_fans_requested ; shift 2 ; break;;
+            -r ) read_all_fan_speeds ; shift 2 ; break;;
+            -t ) read_current_temperature ; shift 2 ; break;;
             --)  break ;;
-            h) usage ; exit 1 ;;
+            -h) usage ; exit 1 ;;
             *) usage ; exit 1 ;;
         esac    
-    done
+    done    
 }
 
 #################

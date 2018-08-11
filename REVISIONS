@@ -1,3 +1,8 @@
+Version 0.2.1
+	- Added Verbosity flag  [-v] 0= no verbosity. 1= verbose output. default 1.
+	- Typo fixes for $cardcount
+	- fixed README
+
 Version 0.2.0
 
 	- Added current temperature readout [-t]
