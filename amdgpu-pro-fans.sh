@@ -3,7 +3,7 @@
 #  AMDGPU-PRO LINUX UTILITIES SUITE  #
 ######################################
 # Utility Name: AMDGPU-PRO-FANS
-# Version: 0.2.0
+# Version: 0.2.1
 # Version Name: MahiMahi
 # https://github.com/DominiLux/amdgpu-pro-fans
 
