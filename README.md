@@ -14,7 +14,7 @@ The current master branch is considered the stable release.  The code in the dev
 
 ## Installation Instructions:
 * sudo apt-get install git
-* git clone https://github.com/darkjarris/amdgpu-pro-fans
+* git clone https://github.com/dominilux/amdgpu-pro-fans
 * cd amdgpu-pro-fans
 * chmod +x amdgpu-pro-fans.sh
 
