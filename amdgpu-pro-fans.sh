@@ -1,9 +1,9 @@
-#/bin/bash
-######################################
+#!/usr/bin/env bash
+#####################################
 #  AMDGPU-PRO LINUX UTILITIES SUITE  #
 ######################################
 # Utility Name: AMDGPU-PRO-FANS
-# Version: 0.1.1
+# Version: 0.2.0
 # Version Name: MahiMahi
 # https://github.com/DominiLux/amdgpu-pro-fans
 
@@ -19,158 +19,131 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Set the percentage you want your fans to run at below.  I'll add the iteration for a --fan-speed flag soon.
-
-fanpercent="75";
-
-
 
 #####################################################################
 #                          *** IMPORTANT ***                        #
 # DO NOT MODIFY PAST THIS POINT IF YOU DONT KNOW WHAT YOUR DOING!!! # 
 #####################################################################
 
-## DEFAULT VARIABLES ##
-error="";
-success="";
-verbosity="2";
-returndata="";
-
-# Constants #
-
-###############################
-# SET ALL FAN SPEEDS THE SAME #
-###############################
-
-gracefull_close () 
+############################
+# COMMAND PARSED VARIABLES #
+############################
+adapter="all"
+targettemp=""
+fanpercent=""
+arguments="$@"
+##################
+# USAGE FUNCTION #
+##################
+usage ()
 {
-    #clear
-    if [ "$verbosity" = "2" ] ; then
-        # Print A Nice Closing Message
-        stty echo;
-           # TO DO: ADD THE FRIENDLY MESSAGE
-        stty -echo;
-    elif [ "$verbosity" = "1" ] ; then
-        # Just print the data
-        stty echo;
-           # TO DO: ADD THE DATA ONLY MESSAGE
-        stty -echo;
-    elif [ "$verbosity" = "0" ] ; then
-        # Dont print anything
-        stty echo;
-        stty -echo;
-    else
-        stty echo;
-        # Print A Message Reminding The User To Set The Verbosity correctly
-        # just in case it gets past initial flags error checking
-        echo "You used an invalid -v (--verbosity) flag";
-        echo "Correct values are 0, 1, or 2 [Default: 2]";
-        echo "Please run the program with -h or --help flag for help";
-        echo "Application will now exit but will not report any data without the flag set";
-        stty -echo;
-    fi
-    stty echo;
-    exit;
+    echo "* AMDGPU-PRO-FANS *"
+    echo "error: invalid arguments"
+    echo "usage: $0 [-s <0-100>] to set fan speed percentage"
+    echo "usage: $0 [-r] to read current fan speed percentage"
+    echo "usage: $0 [-t] to read current temperature"
+    echo "usage: $0 [-h] for help..."
+    exit
 }
 
-gracefull_success ()
-{
-    #lear
-    if [ "$verbosity" = "2" ] ; then
-        # Print A Nice Error Message
-        stty echo;
-        echo "";
-        echo "****************************";
-        echo "* Request Returned Success *";
-        echo "****************************";
-        echo "";
-        echo "$success";
-        stty -echo;
-    elif [ "$verbosity" = "1" ] ; then
-        # Just Print The Word Success 
-        stty echo;
-        echo "SUCCESS";
-        stty -echo;
-    elif [ "$verbosity" = "0" ] ; then
-        # Dont Print Anything
-        stty echo;
-        stty -echo;
-    else
-        # Print A Message Reminding The User To Set The Verbosity correctly
-        # just in case it gets past initial flags error checking
-        stty echo;
-        echo "";
-        echo "You used an invalid -v (--verbosity) flag";
-        echo "Correct values are 0, 1, or 2 [Default: 2]";
-        echo "Please run the program with -h or --help flag for help";
-        echo "Application will now exit but will not report any data without the flag set";
-        echo "";
-        stty -echo;
-    fi
-}
-
-gracefull_error ()
-{
-   # clear
-    stty echo;
-    if [ "$verbosity" = "2" ] ; then
-        # Print A Nice Error Message
-        stty echo;
-        echo "";
-        echo "***************************";
-        echo "* Request Returned Errors *";
-        echo "***************************";
-        echo "";
-        echo $error;
-        stty -echo;
-    elif [ "$verbosity" = "1" ] ; then
-        # Just Print The Word Error
-        stty echo;
-        echo "ERROR";
-        stty -echo;
-    elif [ "$verbosity" = "0" ] ; then
-        # Dont Print Anything
-        stty echo;
-        stty -echo;
-    else
-        # Print A Message Reminding The User To Set The Verbosity correctly
-        # just in case it gets past initial flags error checking
-        stty echo;
-        echo "";
-        echo "You used an invalid -v (--verbosity) flag";
-        echo "Correct values are 0, 1, or 2 [Default: 2]";
-        echo "Please run the program with -h or --help flag for help";
-        echo "Application will now exit but will not report any data without the flag set";
-        echo "";
-        stty -echo;
-    fi
-}
+###########################
+# SET FAN SPEED FUNCTIONS #
+###########################
 
 set_all_fan_speeds ()
 {
     cardcount="0";
-    for i in  /sys/class/drm/card?/ ; do
-         if cd "$i"device/hwmon/hwmon* ; then
-             cd /sys/class/drm/card$cardcount/device/hwmon/hwmon*
-             workingdir="`pwd`";
-             fanmax="255"
-            # fanmax=$(<$workingdir/pwm1_max);
-             if [ "$fanmax" != "0" ] ; then
-            # fanmax=cat pwm1_max ;
-             speed=$(( fanmax / 100 ));
-             speed=$(( speed * fanpercent ));
-                 if sudo echo "$speed" > $workingdir/pwm1 ; then
-                     success="$success SUCCESS: Fan Speed Set To $fanpercent % for Card$cardcount \n    $workingdir/pwm1\n";
-                 else
-                     error="$error ERROR: could not set fan speed for Card$cardcount\n";
-                 fi
-             else
-                 error="$error ERROR: Could not get max fan speed for: Card$cardcount\n";
-             fi
-         else
-             error="$error ERROR: Could not locate device Card$cardcount\n";
-         fi
-         cardcount="$(($cardcount + 1))"; 
+    for CurrentCard in  /sys/class/drm/card?/ ; do
+         for CurrentMonitor in "$CurrentCard"device/hwmon/hwmon?/ ; do
+              cd $CurrentMonitor # &>/dev/null
+              workingdir="`pwd`"
+              fanmax=$(head -1 "$workingdir"/pwm1_max)
+              if [ $fanmax -gt 0 ] ; then    
+                  speed=$(( fanmax * fanpercent ))
+                  speed=$(( speed / 100 ))
+                  sudo chown $USER "$workingdir"/pwm1_enable
+                  sudo chown $USER "$workingdir"/pwm1
+                  sudo echo -n "1" >> $workingdir/pwm1_enable # &>/dev/null
+                  sudo echo -n "$speed" >> $workingdir/pwm1 # &>/dev/null
+                  speedresults=$(head -1 "$workingdir"/pwm1)
+                  if [ $(( speedresults - speed )) -gt 6 ] ; then
+                       echo "Error Setting Speed For Card$cardcount!"
+                  else
+                       echo "Card$cardcount Speed Set To $fanpercent %"
+                  fi
+              else
+                  echo "Error: Unable To Determine Maximum Fan Speed For Card$cardcount!"
+              fi
+         done
+         cardcount="$(($cardcount + 1))"
+    done
+}
+
+read_all_fan_speeds ()
+{
+    cardcount="0";
+    for CurrentCard in  /sys/class/drm/card?/ ; do
+         for CurrentMonitor in "$CurrentCard"device/hwmon/hwmon?/ ; do
+              cd $CurrentMonitor # &>/dev/null
+              workingdir="`pwd`"
+              fanspeed=$(head -1 "$workingdir"/pwm1)
+              fanmax=$(head -1 "$workingdir"/pwm1_max)
+              if [ $fanspeed -gt 0 ] ; then
+              		speedf=$( echo "scale=2; $fanspeed / $fanmax * 100" | bc)
+                  speed=${speedf%.*}
+                  echo "$speed"             
+              else
+                  echo "Error: Unable To Determine Fan Speed For Card$cardcount!"
+              fi
+         done
+         cardcount="$(($cardcount + 1))"
+    done
+}
+
+read_current_temperature ()
+{
+    cardcount="0";
+    for CurrentCard in  /sys/class/drm/card?/ ; do
+         for CurrentMonitor in "$CurrentCard"device/hwmon/hwmon?/ ; do
+              cd $CurrentMonitor # &>/dev/null
+              workingdir="`pwd`"
+              temp=$(head -1 "$workingdir"/temp1_input)
+              temp=$(( $temp/1000 ))
+              if [ $temp -gt 0 ] ; then
+                  echo "$temp"              
+              else
+                  echo "Error: Unable To Determine Card Temperature For Card$cardcount!"
+              fi
+         done
+         cardcount="$(($cardcount + 1))"
+    done
+}
+
+set_fans_requested ()
+{
+    if [ "$adapter"="all" ] ; then
+        set_all_fan_speeds
+    fi
+}
+
+
+#################################
+# PARSE COMMAND LINE PARAMETERS #
+#################################
+command_line_parser ()
+{
+     parseline=`getopt -s bash -u -o a:s:rht -n '$0' -- "$arguments"` 
+     eval set -- "$parseline"
+     while true ; do
+        case "$1" in
+            -a ) adapter="$2" ; shift 2 ;;
+            -s ) fanpercent="$2" ; set_fans_requested ; break ;;
+            -r ) read_all_fan_speeds ; break ;;
+            -t ) read_current_temperature ; break ;;
+            --)  break ;;
+            h) usage ; exit 1 ;;
+            *) usage ; exit 1 ;;
+        esac    
     done
 }
 
@@ -178,23 +151,5 @@ set_all_fan_speeds ()
 # Home Function #
 #################
 
-# This utility requires itself to elevate to the root user.
-echo "Checking for elivated privlidges . . ."
-if [[ $(id -u) -ne 0 ]] ; then
-    # We are not the root user yet.  
-    echo "You did not run as the utility with 'sudo'!"
-    echo "You will be prompted for your sudo password before any changes can be made."
-fi
-set_all_fan_speeds
-if [ "$error" != "" ] ; then
-# Print The Error Messages
-    gracefull_error
-elif [ "$success" != "" ] ; then
-# Print The Success Messages
-    gracefull_success
-else
-    echo "What the hell happened!!!";
-fi
-stty echo;
-gracefull_close
+command_line_parser
 exit;
